@@ -1,7 +1,9 @@
 package ro.dpa.rundeck.plugins.sqlserver;
 
 import com.dtolabs.rundeck.core.execution.workflow.steps.StepException;
+import com.dtolabs.rundeck.core.execution.workflow.steps.StepFailureReason;
 import com.dtolabs.rundeck.core.plugins.Plugin;
+import com.dtolabs.rundeck.core.plugins.configuration.ConfigurationException;
 import com.dtolabs.rundeck.core.plugins.configuration.Describable;
 import com.dtolabs.rundeck.core.plugins.configuration.Description;
 import com.dtolabs.rundeck.plugins.ServiceNameConstants;
@@ -9,10 +11,12 @@ import com.dtolabs.rundeck.plugins.step.PluginStepContext;
 import com.dtolabs.rundeck.plugins.step.StepPlugin;
 import com.dtolabs.rundeck.plugins.util.DescriptionBuilder;
 import com.dtolabs.rundeck.plugins.util.PropertyBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ro.dpa.rundeck.plugins.params.ParamUtils;
 
+
+import java.sql.SQLException;
 import java.util.Map;
 
 /**
@@ -22,27 +26,54 @@ import java.util.Map;
 public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable {
     public static final String SERVICE_PROVIDER_NAME = "ro.dpa.rundeck.plugins.sqlserver.SqlServerAgentWorkflowStepPlugin";
 
-    private static final Log log = LogFactory.getLog(SqlServerAgentWorkflowStepPlugin.class);
+    private static final Logger logger = LoggerFactory.getLogger(SqlServerAgentWorkflowStepPlugin.class);
     private static final String USER = "user";
     private static final String PASSWORD = "password";
     private static final String HOST = "host";
     private static final String PORT = "port";
     private static final String JOB_NAME = "jobName";
-    private static final String JOB_PARAMS = "jobParams";
+    private static final String STEP_NAME = "stepName";
 
     @Override
-    public void executeStep(PluginStepContext pluginStepContext, Map<String, Object> options) throws StepException {
-        String user = ParamUtils.getStringValue(USER, options);
-        String password = ParamUtils.getStringValue(PASSWORD, options);
-        String host = ParamUtils.getStringValue(HOST, options);
-        int port = ParamUtils.getIntValue(PORT, options);
-        String jobName = ParamUtils.getStringValue(JOB_NAME, options);
-        Map<String, String> jobParams = ParamUtils.getMapValues(JOB_PARAMS, options);
+    public void executeStep(PluginStepContext pluginStepContext, Map<String, Object> inputParams) throws StepException {
+        SqlServerJob sqlServerJob = null;
+        try {
+             sqlServerJob = this.buildSqlServerJob(inputParams);
+        } catch (ConfigurationException ex) {
+            logger.error("Could not configure SQL Server job", ex);
+            throw new StepException("Could not configure SQL Server job", StepFailureReason.ConfigurationFailure, inputParams);
+        }
+        try {
+            sqlServerJob.execute();
+        } catch (SQLException ex) {
+            logger.error("SQL execution error", ex);
+            throw new StepException(ex, StepFailureReason.PluginFailed);
+        }
+    }
 
-        String logMessage = "Received following input params: user="+user+", password="+password+", host="+host+", " +
-                "port="+port+", jobName="+jobName+", jobParams="+jobParams;
-        log.info(logMessage);
+    private SqlServerJob buildSqlServerJob(Map<String, Object> inputParams) throws ConfigurationException {
+        String user = ParamUtils.getStringValue(USER, inputParams);
+        String password = ParamUtils.getStringValue(PASSWORD, inputParams);
+        String host = ParamUtils.getStringValue(HOST, inputParams);
+        int port = ParamUtils.getIntValue(PORT, inputParams);
+        String jobName = ParamUtils.getStringValue(JOB_NAME, inputParams);
+        String stepName = ParamUtils.getStringValue(STEP_NAME, inputParams);
+
+        String logMessage = "Building SqlServerJob for following input params: user="+user+", password="+password+", host="+host+", " +
+                "port="+port+", jobName="+jobName+", stepName="+stepName;
+        logger.info(logMessage);
         System.out.println(logMessage);
+
+        SqlServerJob.SqlServerJobBuilder builder = new SqlServerJob.SqlServerJobBuilder();
+        builder
+                .jobName(jobName)
+                .userName(user)
+                .password(password)
+                .serverName(host)
+                .port(port)
+                .stepName(stepName);
+
+        return builder.build();
     }
 
     @Override
@@ -82,11 +113,10 @@ public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable
                     .required(true)
                     .build())
                 .property(PropertyBuilder.builder()
-                    .string(JOB_PARAMS)
-                    .title("Job Parameters")
-                    .description("Job parameters. Enter a single param / value pair on each line, e.g.\r\nparam1=value1\r\nparam2=value2\r\n...")
+                    .string(STEP_NAME)
+                    .title("Step name")
+                    .description("The job will start processing from the step indicated by this parameter. If not provided, job starts from the first step")
                     .required(false)
-                    .renderingAsTextarea()
                     .build())
                 .build();
     }
