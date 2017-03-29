@@ -13,6 +13,8 @@ import java.sql.*;
 public class SqlServerJob {
     private static final Logger logger = LoggerFactory.getLogger(SqlServerJob.class);
 
+    private static final long SLEEP_INTERVAL_BETWEEN_JOB_CHECKS = 30;
+
     private String serverName;
     private int port;
     private String userName;
@@ -20,10 +22,11 @@ public class SqlServerJob {
     private String jobName;
     private String stepName;
 
-    public void execute() throws SQLException {
+    public void execute() throws SQLException, InterruptedException {
         logger.info("Executing SQL Server job with the following details: {}", this.toString());
         try (Connection conn = getConnection()) {
-            startJob(conn);
+            this.startJob(conn);
+            this.waitForJobExecution(conn);
         }
     }
 
@@ -46,6 +49,51 @@ public class SqlServerJob {
         try (CallableStatement cstmt = conn.prepareCall(startJobCommand)) {
             cstmt.execute();
             logger.debug("Executed sp_start_job successfully");
+        }
+    }
+
+    /**
+     * Methods that uses sp_help_job SQL Server stored procedure to check the stored procedure status.
+     *
+     * @param conn
+     * @throws SQLException If the job fails, SQLException is thrown
+     */
+    private void waitForJobExecution(Connection conn) throws SQLException, InterruptedException {
+        String checkJobCommand = "exec msdb.dbo.sp_help_job @job_name = N'"+this.jobName+"'";
+        boolean isFinished = false;
+        while (!isFinished) {
+            //normally sleep should be at the end of the loop, but apparently SQL Server doesn't
+            //change the job status immediately, so we can risk not getting the correct status
+            //immediately after we start the job
+            Thread.sleep(SLEEP_INTERVAL_BETWEEN_JOB_CHECKS * 1000);
+            logger.debug("Running checkJobCommand={}", checkJobCommand);
+            try (CallableStatement cstmt = conn.prepareCall(checkJobCommand)) {
+                ResultSet rs = cstmt.executeQuery();
+                if (rs.next()) {
+                    int currentExecutionStatus = rs.getInt("current_execution_status");
+                    logger.debug("Job name='{}', current_execution_status={}", this.jobName, currentExecutionStatus);
+
+                    ExecutionStatus currentStatus = ExecutionStatus.valueOf(currentExecutionStatus);
+                    isFinished = ExecutionStatus.Idle == currentStatus;
+                    logger.debug("isFinished={}", isFinished);
+                    //job finished, check final status
+                    if (isFinished) {
+                        ExecutionStatus finalStatus = ExecutionStatus.valueOf(rs.getInt("last_run_outcome"));
+                        if (finalStatus != ExecutionStatus.Succeeded) {
+                            //the job failed, raise SQL Exception
+                            logger.error("Job with name='{}' failed with status={}", this.jobName, finalStatus);
+                            throw new SQLException("SQL Server Job with name='{"+this.jobName+"}' " +
+                                    "failed with status={"+finalStatus+"}. Check SQL Server logs for more details.");
+                        } else {
+                            //Successful execution
+                            logger.info("Job with name='{}' processed successfully");
+                            return;
+                        }
+                    }
+
+                    logger.info("Job with name={} still in progress. Waiting for {} seconds...", this.jobName, SLEEP_INTERVAL_BETWEEN_JOB_CHECKS);
+                }
+            }
         }
     }
 

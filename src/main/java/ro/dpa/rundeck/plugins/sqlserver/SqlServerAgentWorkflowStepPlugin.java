@@ -48,6 +48,9 @@ public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable
         } catch (SQLException ex) {
             logger.error("SQL execution error", ex);
             throw new StepException(ex, StepFailureReason.PluginFailed);
+        } catch (InterruptedException ex) {
+            logger.error("Job execution was interrupted.", ex);
+            throw new StepException(ex, StepFailureReason.Interrupted);
         }
     }
 
