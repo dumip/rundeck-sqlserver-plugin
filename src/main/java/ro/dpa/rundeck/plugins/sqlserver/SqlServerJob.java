@@ -17,7 +17,7 @@ import java.sql.*;
 public class SqlServerJob {
     private static final Logger logger = LoggerFactory.getLogger(SqlServerJob.class);
 
-    private static final long SLEEP_INTERVAL_BETWEEN_JOB_CHECKS = 30;
+    private static final long SLEEP_INTERVAL_BETWEEN_JOB_CHECKS = 5;
 
     private String serverName;
     private int port;
@@ -34,14 +34,22 @@ public class SqlServerJob {
 
     public void execute() throws SQLException, InterruptedException {
         logger.info("Executing SQL Server job with the following details: {}", this.toString());
-        try (SqlServerJobDao dao = new SqlServerJobDao(this.serverName, this.port, this.userName, this.password)) {
+        try (SqlServerJobDao dao = this.getSqlServerJobDao()) {
             this.startJob(dao);
             this.waitForJobExecution(dao);
+        } catch (Exception ex) {
+            throw new SQLException(ex);
         }
     }
 
     private void startJob(SqlServerJobDao dao) throws SQLException {
         dao.startJob(this.jobName, this.stepName);
+    }
+
+    public SqlServerJobDao getSqlServerJobDao() throws SQLException {
+        SqlServerJobDao dao = new SqlServerJobDaoImpl(this.serverName, this.port, this.userName, this.password);
+
+        return dao;
     }
 
     /**
@@ -56,7 +64,7 @@ public class SqlServerJob {
             //normally sleep should be at the end of the loop, but apparently SQL Server doesn't
             //change the job status immediately, so we can risk not getting the correct status
             //immediately after we start the job
-            logger.info("Job with name={} in progress. Waiting for {} seconds until next check...", this.jobName, SLEEP_INTERVAL_BETWEEN_JOB_CHECKS);
+            logger.debug("Job with name={} in progress. Waiting for {} seconds until next check...", this.jobName, SLEEP_INTERVAL_BETWEEN_JOB_CHECKS);
             Thread.sleep(SLEEP_INTERVAL_BETWEEN_JOB_CHECKS * 1000);
 
             int currentExecutionStatus = dao.getCurrentExecutionStatus(this.jobName);
