@@ -9,7 +9,7 @@ import java.sql.SQLException;
 public interface SqlServerJobDao extends AutoCloseable {
     /**
      * Starts a SQL Server job using the sp_start_job stored procedure available in MS SQL Server.
-     * Refer {@https://docs.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-start-job-transact-sql here} for
+     * Refer {@here https://docs.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-start-job-transact-sql} for
      * detailed information about this stored procedure
      *
      * @param jobName The job name

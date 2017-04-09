@@ -20,7 +20,11 @@ import java.sql.SQLException;
 import java.util.Map;
 
 /**
- * TODO: explain how the plugin works
+ * Plugin that starts SQL Server Agent jobs by using sp_start_job
+ * MS SQL Server stored procedures, as described {@here https://docs.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-start-job-transact-sql}
+ *
+ * After the job execution is created, the execution status is polled periodically until the job
+ * ends.
  */
 @Plugin(name = SqlServerAgentWorkflowStepPlugin.SERVICE_PROVIDER_NAME, service = ServiceNameConstants.WorkflowStep)
 public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable {
