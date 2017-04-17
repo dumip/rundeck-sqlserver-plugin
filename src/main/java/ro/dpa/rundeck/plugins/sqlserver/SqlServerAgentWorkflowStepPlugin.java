@@ -37,6 +37,7 @@ public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable
     private static final String PORT = "port";
     private static final String JOB_NAME = "jobName";
     private static final String STEP_NAME = "stepName";
+    private static final String SLEEP_INTERVAL = "sleepInterval";
 
     @Override
     public void executeStep(PluginStepContext pluginStepContext, Map<String, Object> inputParams) throws StepException {
@@ -49,12 +50,12 @@ public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable
         }
         try {
             sqlServerJob.execute();
-        } catch (SQLException ex) {
-            logger.error("SQL execution error", ex);
-            throw new StepException(ex, StepFailureReason.PluginFailed);
         } catch (InterruptedException ex) {
             logger.error("Job execution was interrupted.", ex);
             throw new StepException(ex, StepFailureReason.Interrupted);
+        } catch (Exception ex) {
+            logger.error("Execution error", ex);
+            throw new StepException(ex, StepFailureReason.PluginFailed);
         }
     }
 
@@ -65,6 +66,7 @@ public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable
         int port = ParamUtils.getIntValue(PORT, inputParams);
         String jobName = ParamUtils.getStringValue(JOB_NAME, inputParams);
         String stepName = ParamUtils.getStringValue(STEP_NAME, inputParams);
+        int sleepInterval = ParamUtils.getIntValue(SLEEP_INTERVAL, inputParams);
 
         String logMessage = "Building SqlServerJob for following input params: user="+user+", password="+password+", host="+host+", " +
                 "port="+port+", jobName="+jobName+", stepName="+stepName;
@@ -79,6 +81,10 @@ public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable
                 .serverName(host)
                 .port(port)
                 .stepName(stepName);
+
+        if (sleepInterval > 0) {
+            builder.sleepInterval(sleepInterval * 1000);
+        }
 
         return builder.build();
     }
@@ -123,6 +129,12 @@ public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable
                     .string(STEP_NAME)
                     .title("Step name")
                     .description("The job will start processing from the step indicated by this parameter. If not provided, job starts from the first step")
+                    .required(false)
+                    .build())
+                .property(PropertyBuilder.builder()
+                    .string(SLEEP_INTERVAL)
+                    .title("Sleep interval")
+                    .description("The sleep interval (in seconds) between two consecutive job checks. Default value is 5.")
                     .required(false)
                     .build())
                 .build();

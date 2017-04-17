@@ -31,9 +31,21 @@ public class ParamUtils {
      * @return
      */
     public static int getIntValue(String key, Map<String, Object> options) {
+        return getIntValue(key, options, 0);
+    }
+
+    /**
+     * Returns a single int value from the config Map provided by the Rundeck executeStep method.
+     *
+     * @param key
+     * @param options
+     * @param defaultValue
+     * @return
+     */
+    public static int getIntValue(String key, Map<String, Object> options, int defaultValue) {
         String val = ParamUtils.getStringValue(key, options);
         if (val == null) {
-            return 0;
+            return defaultValue;
         }
 
         return Integer.parseInt(val);

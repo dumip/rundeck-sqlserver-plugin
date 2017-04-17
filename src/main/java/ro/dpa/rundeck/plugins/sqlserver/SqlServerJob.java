@@ -4,6 +4,8 @@ import com.dtolabs.rundeck.core.plugins.configuration.ConfigurationException;
 import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ro.dpa.rundeck.plugins.JobDao;
+import ro.dpa.rundeck.plugins.SubmitAndPollJob;
 
 import java.sql.*;
 
@@ -14,11 +16,10 @@ import java.sql.*;
  *
  * Created by dumitru.pascu on 3/26/2017.
  */
-public class SqlServerJob {
+public class SqlServerJob extends SubmitAndPollJob {
     private static final Logger logger = LoggerFactory.getLogger(SqlServerJob.class);
 
-    private static final long SLEEP_INTERVAL_BETWEEN_JOB_CHECKS = 5;
-
+    private long sleepInterval;
     private String serverName;
     private int port;
     private String userName;
@@ -32,24 +33,16 @@ public class SqlServerJob {
 
     }
 
-    public void execute() throws SQLException, InterruptedException {
-        logger.info("Executing SQL Server job with the following details: {}", this.toString());
-        try (SqlServerJobDao dao = this.getSqlServerJobDao()) {
-            this.startJob(dao);
-            this.waitForJobExecution(dao);
-        } catch (Exception ex) {
-            throw new SQLException(ex);
-        }
-    }
-
-    private void startJob(SqlServerJobDao dao) throws SQLException {
-        dao.startJob(this.jobName, this.stepName);
-    }
-
-    public SqlServerJobDao getSqlServerJobDao() throws SQLException {
+    @Override
+    protected JobDao buildDao() throws SQLException {
         SqlServerJobDao dao = new SqlServerJobDaoImpl(this.serverName, this.port, this.userName, this.password);
 
         return dao;
+    }
+
+    @Override
+    protected void startJob(JobDao dao) throws Exception {
+        ((SqlServerJobDao)dao).startJob(this.jobName, this.stepName);
     }
 
     /**
@@ -58,16 +51,18 @@ public class SqlServerJob {
      * @param dao
      * @throws SQLException If the job fails, SQLException is thrown
      */
-    private void waitForJobExecution(SqlServerJobDao dao) throws SQLException, InterruptedException {
+    @Override
+    protected void waitForJobExecution(JobDao dao) throws SQLException, InterruptedException {
         boolean isFinished = false;
+        SqlServerJobDao sqlServerJobDao = (SqlServerJobDao) dao;
         while (!isFinished) {
             //normally sleep should be at the end of the loop, but apparently SQL Server doesn't
             //change the job status immediately, so we can risk not getting the correct status
             //immediately after we start the job
-            logger.debug("Job with name={} in progress. Waiting for {} seconds until next check...", this.jobName, SLEEP_INTERVAL_BETWEEN_JOB_CHECKS);
-            Thread.sleep(SLEEP_INTERVAL_BETWEEN_JOB_CHECKS * 1000);
+            logger.debug("Job with name={} in progress. Waiting for {} seconds until next check...", this.jobName, this.sleepInterval / 1000);
+            Thread.sleep(this.sleepInterval);
 
-            int currentExecutionStatus = dao.getCurrentExecutionStatus(this.jobName);
+            int currentExecutionStatus = sqlServerJobDao.getCurrentExecutionStatus(this.jobName);
             logger.debug("Job name='{}', current_execution_status={}", this.jobName, currentExecutionStatus);
 
             ExecutionStatus currentStatus = ExecutionStatus.valueOf(currentExecutionStatus);
@@ -75,7 +70,7 @@ public class SqlServerJob {
             logger.debug("isFinished={}", isFinished);
             //job finished, check final status
             if (isFinished) {
-                ExecutionStatus finalStatus = ExecutionStatus.valueOf(dao.getLastExecutionStatus(this.jobName));
+                ExecutionStatus finalStatus = ExecutionStatus.valueOf(sqlServerJobDao.getLastExecutionStatus(this.jobName));
                 if (finalStatus != ExecutionStatus.Succeeded) {
                     //the job failed, raise SQL Exception
                     logger.error("Job with name='{}' failed with status={}", this.jobName, finalStatus);
@@ -90,7 +85,7 @@ public class SqlServerJob {
         }
     }
 
-    public static class SqlServerJobBuilder {
+    public static class SqlServerJobBuilder extends SubmitAndPollJob.Builder<SqlServerJob> {
         private String nestedServerName;
         private int nestedPort;
         private String nestedUserName;
@@ -142,6 +137,7 @@ public class SqlServerJob {
                         "jobName");
             }
 
+            job.sleepInterval = this.nestedSleepInterval;
             job.serverName = this.nestedServerName;
             job.port = this.nestedPort;
             job.userName = this.nestedUserName;

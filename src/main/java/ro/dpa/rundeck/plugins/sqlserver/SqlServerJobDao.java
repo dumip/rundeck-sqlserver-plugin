@@ -1,12 +1,14 @@
 package ro.dpa.rundeck.plugins.sqlserver;
 
+import ro.dpa.rundeck.plugins.JobDao;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
  * Created by dumitru.pascu on 3/31/2017.
  */
-public interface SqlServerJobDao extends AutoCloseable {
+public interface SqlServerJobDao extends JobDao {
     /**
      * Starts a SQL Server job using the sp_start_job stored procedure available in MS SQL Server.
      * Refer {@here https://docs.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-start-job-transact-sql} for

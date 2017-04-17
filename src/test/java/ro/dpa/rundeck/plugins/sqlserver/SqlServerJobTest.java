@@ -39,7 +39,7 @@ public class SqlServerJobTest {
         SqlServerJobDao mockDao = new SuccessSqlServerJobDao();
 
         SqlServerJob jobUnderTest = PowerMockito.spy(this.buildValidSqlServerJob());
-        PowerMockito.doReturn(mockDao).when(jobUnderTest, "getSqlServerJobDao");
+        PowerMockito.doReturn(mockDao).when(jobUnderTest, "buildDao");
 
         jobUnderTest.execute();
     }
@@ -49,7 +49,7 @@ public class SqlServerJobTest {
         SqlServerJobDao mockDao = new FailedSqlServerJobDao();
 
         SqlServerJob jobUnderTest = PowerMockito.spy(this.buildValidSqlServerJob());
-        PowerMockito.doReturn(mockDao).when(jobUnderTest, "getSqlServerJobDao");
+        PowerMockito.doReturn(mockDao).when(jobUnderTest, "buildDao");
 
         jobUnderTest.execute();
     }

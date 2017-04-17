@@ -1,7 +1,10 @@
 package ro.dpa.rundeck.plugins;
 
+import com.dtolabs.rundeck.core.plugins.configuration.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.sql.SQLException;
 
 /**
  * Abstract class describing job class which submits an external job for execution,
@@ -12,7 +15,7 @@ import org.slf4j.LoggerFactory;
 public abstract class SubmitAndPollJob {
     private static final Logger logger = LoggerFactory.getLogger(SubmitAndPollJob.class);
 
-    protected static final long SLEEP_INTERVAL_BETWEEN_JOB_CHECKS = 5;
+    public static final long DEFAULT_SLEEP_INTERVAL_BETWEEN_JOB_CHECKS = 5000;
 
 
     public void execute() throws Exception, InterruptedException {
@@ -25,20 +28,20 @@ public abstract class SubmitAndPollJob {
         }
     }
 
-    protected abstract JobDao buildDao();
+    protected abstract JobDao buildDao() throws SQLException;
 
     protected abstract void startJob(JobDao dao) throws Exception;
 
     protected abstract void waitForJobExecution(JobDao dao) throws Exception, InterruptedException;
 
     public static abstract class Builder<T extends SubmitAndPollJob> {
-        protected long nestedSleepInterval = SLEEP_INTERVAL_BETWEEN_JOB_CHECKS;
+        protected long nestedSleepInterval = DEFAULT_SLEEP_INTERVAL_BETWEEN_JOB_CHECKS;
 
         public Builder<T> sleepInterval(long sleepInterval) {
             this.nestedSleepInterval = sleepInterval;
             return this;
         }
 
-        public abstract T build();
+        public abstract T build() throws ConfigurationException;
     }
 }
