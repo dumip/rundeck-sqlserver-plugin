@@ -16,14 +16,9 @@ import java.sql.*;
  *
  * Created by dumitru.pascu on 3/26/2017.
  */
-public class SqlServerJob extends SubmitAndPollJob {
+public class SqlServerJob extends SubmitAndPollJob<SqlServerJobDao> {
     private static final Logger logger = LoggerFactory.getLogger(SqlServerJob.class);
 
-    private long sleepInterval;
-    private String serverName;
-    private int port;
-    private String userName;
-    private String password;
     private String jobName;
     private String stepName;
 
@@ -34,15 +29,15 @@ public class SqlServerJob extends SubmitAndPollJob {
     }
 
     @Override
-    protected JobDao buildDao() throws SQLException {
+    protected SqlServerJobDao buildDao() throws SQLException {
         SqlServerJobDao dao = new SqlServerJobDaoImpl(this.serverName, this.port, this.userName, this.password);
 
         return dao;
     }
 
     @Override
-    protected void startJob(JobDao dao) throws Exception {
-        ((SqlServerJobDao)dao).startJob(this.jobName, this.stepName);
+    protected void startJob(SqlServerJobDao dao) throws Exception {
+        dao.startJob(this.jobName, this.stepName);
     }
 
     /**
@@ -52,9 +47,8 @@ public class SqlServerJob extends SubmitAndPollJob {
      * @throws SQLException If the job fails, SQLException is thrown
      */
     @Override
-    protected void waitForJobExecution(JobDao dao) throws SQLException, InterruptedException {
+    protected void waitForJobExecution(SqlServerJobDao dao) throws SQLException, InterruptedException {
         boolean isFinished = false;
-        SqlServerJobDao sqlServerJobDao = (SqlServerJobDao) dao;
         while (!isFinished) {
             //normally sleep should be at the end of the loop, but apparently SQL Server doesn't
             //change the job status immediately, so we can risk not getting the correct status
@@ -62,16 +56,16 @@ public class SqlServerJob extends SubmitAndPollJob {
             logger.debug("Job with name={} in progress. Waiting for {} seconds until next check...", this.jobName, this.sleepInterval / 1000);
             Thread.sleep(this.sleepInterval);
 
-            int currentExecutionStatus = sqlServerJobDao.getCurrentExecutionStatus(this.jobName);
+            int currentExecutionStatus = dao.getCurrentExecutionStatus(this.jobName);
             logger.debug("Job name='{}', current_execution_status={}", this.jobName, currentExecutionStatus);
 
-            ExecutionStatus currentStatus = ExecutionStatus.valueOf(currentExecutionStatus);
-            isFinished = ExecutionStatus.Idle == currentStatus;
+            SqlExecutionStatus currentStatus = SqlExecutionStatus.valueOf(currentExecutionStatus);
+            isFinished = SqlExecutionStatus.Idle == currentStatus;
             logger.debug("isFinished={}", isFinished);
             //job finished, check final status
             if (isFinished) {
-                ExecutionStatus finalStatus = ExecutionStatus.valueOf(sqlServerJobDao.getLastExecutionStatus(this.jobName));
-                if (finalStatus != ExecutionStatus.Succeeded) {
+                SqlExecutionStatus finalStatus = SqlExecutionStatus.valueOf(dao.getLastExecutionStatus(this.jobName));
+                if (finalStatus != SqlExecutionStatus.Succeeded) {
                     //the job failed, raise SQL Exception
                     logger.error("Job with name='{}' failed with status={}", this.jobName, finalStatus);
                     throw new SQLException("SQL Server Job with name='{"+this.jobName+"}' " +
@@ -86,35 +80,12 @@ public class SqlServerJob extends SubmitAndPollJob {
     }
 
     public static class SqlServerJobBuilder extends SubmitAndPollJob.Builder<SqlServerJob> {
-        private String nestedServerName;
-        private int nestedPort;
-        private String nestedUserName;
-        private String nestedPassword;
+
         private String nestedJobName;
         private String nestedStepName;
 
         public SqlServerJobBuilder() {
 
-        }
-
-        public SqlServerJobBuilder serverName(String serverName) {
-            this.nestedServerName = serverName;
-            return this;
-        }
-
-        public SqlServerJobBuilder port(int port) {
-            this.nestedPort = port;
-            return this;
-        }
-
-        public SqlServerJobBuilder userName(String userName) {
-            this.nestedUserName = userName;
-            return this;
-        }
-
-        public SqlServerJobBuilder password(String password) {
-            this.nestedPassword = password;
-            return this;
         }
 
         public SqlServerJobBuilder jobName(String jobName) {
@@ -127,15 +98,17 @@ public class SqlServerJob extends SubmitAndPollJob {
             return this;
         }
 
-        public SqlServerJob build() throws ConfigurationException {
-            SqlServerJob job = new SqlServerJob();
-            //check for mandatory params
-            if (Strings.isNullOrEmpty(this.nestedServerName) || Strings.isNullOrEmpty(this.nestedUserName)
-                    || Strings.isNullOrEmpty(this.nestedPassword) || Strings.isNullOrEmpty(this.nestedJobName) ||
-                    this.nestedPort == 0) {
+        @Override
+        protected void validate() throws ConfigurationException {
+            if (Strings.isNullOrEmpty(this.nestedJobName)) {
                 throw new ConfigurationException("Following parameters are mandatory: serverName, port, userName, password, " +
                         "jobName");
             }
+        }
+
+        @Override
+        protected SqlServerJob createInstance() {
+            SqlServerJob job = new SqlServerJob();
 
             job.sleepInterval = this.nestedSleepInterval;
             job.serverName = this.nestedServerName;

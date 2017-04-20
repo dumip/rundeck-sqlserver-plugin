@@ -8,7 +8,7 @@ package ro.dpa.rundeck.plugins.sqlserver;
  *
  * Created by dumitru.pascu on 3/29/2017.
  */
-public enum ExecutionStatus {
+public enum SqlExecutionStatus {
     Failed(0),
     Succeeded(1),
     Canceled(3),
@@ -17,18 +17,18 @@ public enum ExecutionStatus {
 
     private final int status;
 
-    ExecutionStatus(int status) {
+    SqlExecutionStatus(int status) {
         this.status = status;
     }
 
-    public static ExecutionStatus valueOf(int statusValue) {
-        for (ExecutionStatus status : ExecutionStatus.values()) {
+    public static SqlExecutionStatus valueOf(int statusValue) {
+        for (SqlExecutionStatus status : SqlExecutionStatus.values()) {
             if (statusValue == status.status) {
                 return status;
             }
         }
 
-        return ExecutionStatus.Unknown;
+        return SqlExecutionStatus.Unknown;
     }
 
     public int value() {

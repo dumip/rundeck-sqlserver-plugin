@@ -76,11 +76,11 @@ public class SqlServerAgentWorkflowStepPlugin implements StepPlugin, Describable
         SqlServerJob.SqlServerJobBuilder builder = new SqlServerJob.SqlServerJobBuilder();
         builder
                 .jobName(jobName)
+                .stepName(stepName)
                 .userName(user)
                 .password(password)
                 .serverName(host)
-                .port(port)
-                .stepName(stepName);
+                .port(port);
 
         if (sleepInterval > 0) {
             builder.sleepInterval(sleepInterval * 1000);

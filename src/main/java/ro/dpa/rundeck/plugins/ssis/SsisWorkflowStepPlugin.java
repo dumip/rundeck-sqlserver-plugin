@@ -33,6 +33,7 @@ public class SsisWorkflowStepPlugin implements StepPlugin, Describable {
     private static final String HOST = "host";
     private static final String PORT = "port";
     private static final String PACKAGE_NAME = "packageName";
+    private static final String PROJECT_NAME = "projectName";
     private static final String FOLDER_NAME = "folderName";
     private static final String PROJECT_PARAMETERS = "projectParameters";
     private static final String PACKAGE_PARAMETERS = "packageParameters";
@@ -71,6 +72,12 @@ public class SsisWorkflowStepPlugin implements StepPlugin, Describable {
                         .string(PORT)
                         .title("Port")
                         .description("SQL database port")
+                        .required(true)
+                        .build())
+                .property(PropertyBuilder.builder()
+                        .string(PROJECT_NAME)
+                        .title("Project name")
+                        .description("The name of the SSIS project")
                         .required(true)
                         .build())
                 .property(PropertyBuilder.builder()

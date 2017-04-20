@@ -14,12 +14,12 @@ public class FailedSqlServerJobDao implements SqlServerJobDao {
 
     @Override
     public int getCurrentExecutionStatus(String jobName) throws SQLException {
-        return ExecutionStatus.Idle.value();
+        return SqlExecutionStatus.Idle.value();
     }
 
     @Override
     public int getLastExecutionStatus(String jobName) throws SQLException {
-        return ExecutionStatus.Failed.value();
+        return SqlExecutionStatus.Failed.value();
     }
 
     @Override
