@@ -4,7 +4,6 @@ import com.dtolabs.rundeck.core.plugins.configuration.ConfigurationException;
 import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ro.dpa.rundeck.plugins.JobDao;
 import ro.dpa.rundeck.plugins.SubmitAndPollJob;
 
 import java.sql.*;

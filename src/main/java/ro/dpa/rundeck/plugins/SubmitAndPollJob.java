@@ -13,7 +13,7 @@ import java.sql.SQLException;
  *
  * Created by dumitru.pascu on 4/9/2017.
  */
-public abstract class SubmitAndPollJob<T extends JobDao> {
+public abstract class SubmitAndPollJob<T extends AutoCloseable> {
 
     protected long sleepInterval;
     protected String serverName;

@@ -1,6 +1,6 @@
 package ro.dpa.rundeck.plugins.sqlserver;
 
-import ro.dpa.rundeck.plugins.JobDao;
+import ro.dpa.rundeck.plugins.DaoWithConnection;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -8,7 +8,7 @@ import java.sql.SQLException;
 /**
  * Created by dumitru.pascu on 3/31/2017.
  */
-public interface SqlServerJobDao extends JobDao {
+public interface SqlServerJobDao extends AutoCloseable {
     /**
      * Starts a SQL Server job using the sp_start_job stored procedure available in MS SQL Server.
      * Refer {@here https://docs.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-start-job-transact-sql} for
@@ -38,15 +38,4 @@ public interface SqlServerJobDao extends JobDao {
      */
     public int getLastExecutionStatus(String jobName) throws SQLException;
 
-    /**
-     * Creates a SQL Connection
-     *
-     * @param serverName
-     * @param port
-     * @param userName
-     * @param password
-     * @return
-     * @throws SQLException
-     */
-    public Connection getConnection(String serverName, int port, String userName, String password) throws SQLException;
 }

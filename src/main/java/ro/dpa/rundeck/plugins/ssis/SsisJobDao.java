@@ -1,13 +1,13 @@
 package ro.dpa.rundeck.plugins.ssis;
 
-import ro.dpa.rundeck.plugins.JobDao;
+import ro.dpa.rundeck.plugins.DaoWithConnection;
 
 import java.sql.SQLException;
 
 /**
  * Created by dumitru.pascu on 4/20/2017.
  */
-public interface SsisJobDao extends JobDao {
+public interface SsisJobDao extends AutoCloseable {
 
     /**
      * Creates an SSIS execution. Refer

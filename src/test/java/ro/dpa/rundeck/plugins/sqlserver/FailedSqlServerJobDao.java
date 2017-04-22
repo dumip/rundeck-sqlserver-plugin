@@ -23,11 +23,6 @@ public class FailedSqlServerJobDao implements SqlServerJobDao {
     }
 
     @Override
-    public Connection getConnection(String serverName, int port, String userName, String password) throws SQLException {
-        return new FakeConnection();
-    }
-
-    @Override
     public void close() throws Exception {
 
     }

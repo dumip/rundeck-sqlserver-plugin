@@ -3,6 +3,7 @@ package ro.dpa.rundeck.plugins.sqlserver;
 import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ro.dpa.rundeck.plugins.DaoWithConnection;
 
 import java.sql.*;
 
@@ -12,18 +13,18 @@ import java.sql.*;
  *
  * Created by dumitru.pascu on 3/29/2017.
  */
-public class SqlServerJobDaoImpl implements SqlServerJobDao {
+public class SqlServerJobDaoImpl extends DaoWithConnection implements SqlServerJobDao {
 
     private static final Logger logger = LoggerFactory.getLogger(SqlServerJobDaoImpl.class);
 
     private Connection conn;
 
     public SqlServerJobDaoImpl() {
-
+        super();
     }
 
     public SqlServerJobDaoImpl(String server, int port, String user, String password) throws SQLException {
-        this.conn = this.getConnection(server, port, user, password);
+        super(server, port, user, password);
     }
 
     @Override
@@ -73,30 +74,5 @@ public class SqlServerJobDaoImpl implements SqlServerJobDao {
         return currentExecutionStatus;
     }
 
-    @Override
-    public Connection getConnection(String serverName, int port, String userName, String password) throws SQLException {
-        String connectionUrl = "jdbc:sqlserver://" + serverName + ":" + port + ";" + "username="
-                + userName + ";password=" + password + ";";
 
-        // Establish the connection.
-        try {
-            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-        } catch (ClassNotFoundException ex) {
-            //should never reach here, unless we have bad jdbc driver configuration in pom.xml
-            throw new RuntimeException(ex);
-        }
-
-        Connection conn = DriverManager.getConnection(connectionUrl);
-        logger.info("Connected successfully to DB for following URL={}", connectionUrl);
-        return conn;
-    }
-
-    @Override
-    public void close() throws SQLException {
-        conn.close();
-    }
-
-    public void setConn(Connection conn) {
-        this.conn = conn;
-    }
 }
