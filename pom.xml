@@ -106,7 +106,7 @@
                             <Rundeck-Plugin-Version>1.1</Rundeck-Plugin-Version>
                             <Rundeck-Plugin-Archive>true</Rundeck-Plugin-Archive>
                             <Rundeck-Plugin-Classnames>
-                                ro.dpa.rundeck.plugins.sqlserver.SqlServerAgentWorkflowStepPlugin
+                                ro.dpa.rundeck.plugins.sqlserver.SqlServerAgentWorkflowStepPlugin,ro.dpa.rundeck.plugins.ssis.SsisWorkflowStepPlugin
                             </Rundeck-Plugin-Classnames>
                             <Rundeck-Plugin-Author>Dumitru Pascu</Rundeck-Plugin-Author>
                         </manifestEntries>

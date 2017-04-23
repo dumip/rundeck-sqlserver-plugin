@@ -17,8 +17,6 @@ public class SqlServerJobDaoImpl extends DaoWithConnection implements SqlServerJ
 
     private static final Logger logger = LoggerFactory.getLogger(SqlServerJobDaoImpl.class);
 
-    private Connection conn;
-
     public SqlServerJobDaoImpl() {
         super();
     }

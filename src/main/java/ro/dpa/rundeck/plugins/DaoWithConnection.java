@@ -14,7 +14,7 @@ public abstract class DaoWithConnection implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(DaoWithConnection.class);
 
-    private Connection conn;
+    protected Connection conn;
 
     public DaoWithConnection() {
 

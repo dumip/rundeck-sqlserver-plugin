@@ -1,7 +1,9 @@
 package ro.dpa.rundeck.plugins.ssis;
 
 import com.dtolabs.rundeck.core.execution.workflow.steps.StepException;
+import com.dtolabs.rundeck.core.execution.workflow.steps.StepFailureReason;
 import com.dtolabs.rundeck.core.plugins.Plugin;
+import com.dtolabs.rundeck.core.plugins.configuration.ConfigurationException;
 import com.dtolabs.rundeck.core.plugins.configuration.Describable;
 import com.dtolabs.rundeck.core.plugins.configuration.Description;
 import com.dtolabs.rundeck.plugins.ServiceNameConstants;
@@ -11,6 +13,7 @@ import com.dtolabs.rundeck.plugins.util.DescriptionBuilder;
 import com.dtolabs.rundeck.plugins.util.PropertyBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ro.dpa.rundeck.plugins.params.ParamUtils;
 
 import java.util.Map;
 
@@ -38,10 +41,65 @@ public class SsisWorkflowStepPlugin implements StepPlugin, Describable {
     private static final String PROJECT_PARAMETERS = "projectParameters";
     private static final String PACKAGE_PARAMETERS = "packageParameters";
     private static final String LOGGING_PARAMETERS = "loggingParameters";
+    private static final String SLEEP_INTERVAL = "sleepInterval";
 
     @Override
-    public void executeStep(PluginStepContext pluginStepContext, Map<String, Object> map) throws StepException {
+    public void executeStep(PluginStepContext pluginStepContext, Map<String, Object> inputParams) throws StepException {
+        SsisJob ssisJob = null;
+        try {
+            ssisJob = this.buildSsisJob(inputParams);
+        } catch (ConfigurationException ex) {
+            logger.error("Could not configure SSIS job", ex);
+            throw new StepException("Could not configure SSIS job", StepFailureReason.ConfigurationFailure, inputParams);
+        }
+        try {
+            ssisJob.execute();
+        } catch (InterruptedException ex) {
+            logger.error("Job execution was interrupted.", ex);
+            throw new StepException(ex, StepFailureReason.Interrupted);
+        } catch (Exception ex) {
+            logger.error("Execution error", ex);
+            throw new StepException(ex, StepFailureReason.PluginFailed);
+        }
+    }
 
+    private SsisJob buildSsisJob(Map<String, Object> inputParams) throws ConfigurationException {
+        String user = ParamUtils.getStringValue(USER, inputParams);
+        String password = ParamUtils.getStringValue(PASSWORD, inputParams);
+        String host = ParamUtils.getStringValue(HOST, inputParams);
+        int port = ParamUtils.getIntValue(PORT, inputParams);
+        String packageName = ParamUtils.getStringValue(PACKAGE_NAME, inputParams);
+        String projectName = ParamUtils.getStringValue(PROJECT_NAME, inputParams);
+        String folderName = ParamUtils.getStringValue(FOLDER_NAME, inputParams);
+        Map<String, String> projectParameters = ParamUtils.getMapValues(PROJECT_PARAMETERS, inputParams);
+        Map<String, String> packageParametes = ParamUtils.getMapValues(PACKAGE_PARAMETERS, inputParams);
+        Map<String, String> loggingParameters = ParamUtils.getMapValues(LOGGING_PARAMETERS, inputParams);
+        int sleepInterval = ParamUtils.getIntValue(SLEEP_INTERVAL, inputParams);
+
+        logger.info("Building SsisJob with following parameters: user={},password={}," +
+                "host={},port={},packageName={},projectName={},folderName={},projectParameters={}," +
+                "packageParameters={},loggingParameters={},sleepInterva={}",user, password,
+                host, port, packageName, projectName, folderName, projectParameters, packageParametes,
+                loggingParameters, sleepInterval);
+
+        SsisJob.SsisJobBuilder builder = new SsisJob.SsisJobBuilder();
+        builder
+                .projectName(projectName)
+                .folderName(folderName)
+                .packageName(packageName)
+                .projectParameters(projectParameters)
+                .packageParameters(packageParametes)
+                .loggingParameters(loggingParameters)
+                .userName(user)
+                .password(password)
+                .serverName(host)
+                .port(port);
+
+        if (sleepInterval > 0) {
+            builder.sleepInterval(sleepInterval * 1000);
+        }
+
+        return builder.build();
     }
 
     @Override

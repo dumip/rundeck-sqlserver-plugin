@@ -31,7 +31,8 @@ public class SsisJob extends SubmitAndPollJob<SsisJobDao> {
 
     @Override
     protected SsisJobDao buildDao() throws SQLException {
-        return null;
+        SsisJobDao dao = new SsisJobDaoImpl(this.serverName, this.port, this.userName, this.password);
+        return dao;
     }
 
     @Override
